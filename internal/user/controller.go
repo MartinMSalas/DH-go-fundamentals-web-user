@@ -1,7 +1,7 @@
 package user
 
 import (
-	domain "DH-go-fundamentals-web-user/internal/domain"
+	//domain "DH-go-fundamentals-web-user/internal/domain"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -35,12 +35,12 @@ func MakeEndpoints(ctx context.Context, s Service) Controller {
 		case http.MethodPost:
 			//PostUser(ctx, s, w, r)
 			decode := json.NewDecoder(r.Body)
-			var u domain.User
-			if err := decode.Decode(&u); err != nil {
+			var req CreateReq
+			if err := decode.Decode(&req); err != nil {
 				MsgResponse(w, http.StatusBadRequest, err.Error())
 				return
 			}
-			PostUser(ctx, s, w, u)
+			PostUser(ctx, s, w, req)
 		default:
 			invalidMethod(w)
 		}
