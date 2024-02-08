@@ -4,14 +4,15 @@ import (
 	//domain "DH-go-fundamentals-web-user/internal/domain"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	
+
 	"net/http"
 	"strings"
 )
 
 type (
-	Controller func(w http.ResponseWriter, r *http.Request)
+	Controller func(ctx context.Context, request interface{}) (interface{}, error)
 
 	Endpoints struct {
 		Create Controller
@@ -25,36 +26,53 @@ type (
 	}
 )
 
-func MakeEndpoints(ctx context.Context, s Service) Controller {
+func MakeEndpoints(ctx context.Context, s Service) Endpoints {
 	fmt.Println("MakeEndpoints")
-	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("MakeEndpoints 2")
-		switch r.Method {
-		case http.MethodGet:
-			GetAllUser(ctx, s, w)
-		case http.MethodPost:
-			//PostUser(ctx, s, w, r)
-			decode := json.NewDecoder(r.Body)
-			var req CreateReq
-			if err := decode.Decode(&req); err != nil {
-				MsgResponse(w, http.StatusBadRequest, err.Error())
-				return
-			}
-			PostUser(ctx, s, w, req)
-		default:
-			invalidMethod(w)
+	return Endpoints{
+		Create: makeCreateEndpoint(s),
+		GetAll: maketGetAllEndpoint(s),
+	}	
+	
+}
+
+
+
+
+func makeCreateEndpoint(s 	Service) Controller{
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(CreateReq)
+
+		if strings.TrimSpace(req.FirstName) == "" {			
+			return nil, errors.New("first name is required")
+
 		}
+		if strings.TrimSpace(req.LastName) == "" {
+			
+			return nil, errors.New("last name is required")
+		}
+		if strings.TrimSpace(req.Email) == "" {
+			
+			return nil, errors.New("email is required")
+		}
+		user, err := s.Create(ctx, req.FirstName, req.LastName, req.Email)
+		if err != nil {
+			
+			return nil, err
+		}
+	
+		return user, nil
 	}
 }
 
-
-
-func invalidMethod(w http.ResponseWriter) {
-	status := http.StatusMethodNotAllowed
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status": %d, "message": "method not allowed"}`, status)
+func maketGetAllEndpoint(s Service) Controller {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		users, err := s.GetAll(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return users, nil
+	}
 }
-
 func GetAllUser(ctx context.Context, s Service, w http.ResponseWriter) {
 	fmt.Println("GetAllUser in Controller")
 	users, err := s.GetAll(ctx)
@@ -73,29 +91,7 @@ func GetAllUser(ctx context.Context, s Service, w http.ResponseWriter) {
 		DataResponse(w, http.StatusCreated, u)
 	}
 */
-func PostUser(ctx context.Context, s Service, w http.ResponseWriter, data interface{}) {
-	req := data.(CreateReq)
 
-	if strings.TrimSpace(req.FirstName) == "" {
-		MsgResponse(w, http.StatusBadRequest, "Invalid first name")
-		return
-	}
-	if strings.TrimSpace(req.LastName) == "" {
-		MsgResponse(w, http.StatusBadRequest, "Invalid last name")
-		return
-	}
-	if strings.TrimSpace(req.Email) == "" {
-		MsgResponse(w, http.StatusBadRequest, "Invalid email")
-		return
-	}
-	user, err := s.Create(ctx, req.FirstName, req.LastName, req.Email)
-	if err != nil {
-		MsgResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	DataResponse(w, http.StatusCreated, user)
-}
 func MsgResponse(w http.ResponseWriter, status int, message string) {
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, message)
