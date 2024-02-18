@@ -6,15 +6,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
 func NewUserHTTPServer(ctx context.Context, router *http.ServeMux, endpoints user.Endpoints) {
-	router.HandleFunc("/users", UserServer(ctx, endpoints))
+	router.HandleFunc("/users/", UserServer(ctx, endpoints))
 }
 
 func UserServer(ctx context.Context, endpoints user.Endpoints) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		url := r.URL.Path
+		log.Println(r.Method, ": ", url)
 		tran := transport.New(w, r, ctx)
 
 		switch r.Method {

@@ -55,3 +55,14 @@ func (t *transport) Server(
 	}
 }
 	
+func Clean(url string) ([]string, int){
+	if url[0] != '/' {
+		url = "/" + url
+	}
+
+	if  url[len(url)-1] != '/' {
+		url = url + "/"
+		//test()
+		
+	}
+}
